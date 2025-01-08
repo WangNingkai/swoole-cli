@@ -9,7 +9,7 @@ use RuntimeException;
 
 class Preprocessor
 {
-    public const VERSION = '1.6';
+    public const VERSION = '1.7';
     public const IMAGE_NAME = 'phpswoole/swoole-cli-builder';
     public const CONTAINER_NAME = 'swoole-cli-builder';
 
@@ -22,6 +22,7 @@ class Preprocessor
 
     protected string $cCompiler = 'clang';
     protected string $cppCompiler = 'clang++';
+
     protected string $lld = 'ld.lld';
 
     protected array $downloadExtensionList = [];
@@ -56,6 +57,7 @@ class Preprocessor
     protected string $globalPrefix = '/usr/local/swoole-cli';
 
     protected string $extraLdflags = '';
+
     protected string $extraOptions = '';
     protected string $extraCflags = '';
 
@@ -77,72 +79,24 @@ class Preprocessor
     protected array $inputOptions = [];
 
     protected array $binPaths = [];
+
     /**
      * Extensions enabled by default
      * @var array|string[]
      */
-    protected array $extEnabled = [
-        'opcache',
-        'curl',
-        'iconv',
-        'bz2',
-        'bcmath',
-        'pcntl',
-        'filter',
-        'session',
-        'tokenizer',
-        'mbstring',
-        'ctype',
-        'zlib',
-        'zip',
-        'posix',
-        'sockets',
-        'pdo',
-        'sqlite3',
-        'phar',
-        'mysqlnd',
-        'mysqli',
-        'intl',
-        'fileinfo',
-        'pdo_mysql',
-        'pdo_sqlite',
-        'soap',
-        'xsl',
-        'gmp',
-        'exif',
-        'sodium',
-        'openssl',
-        'readline',
-        'xml',
-        'gd',
-        'redis',
-        'swoole',
-        'yaml',
-        'imagick',
-        'mongodb',
-    ];
+    protected array $extEnabled;
 
     protected array $endCallbacks = [];
     protected array $extCallbacks = [];
-
     protected array $beforeConfigure = [];
-
-    protected string $configureVarables;
+    protected string $configureVariables;
+    protected string $buildType = 'release';
+    protected bool $inVirtualMachine = false;
 
     protected function __construct()
     {
-        switch (PHP_OS) {
-            default:
-            case 'Linux':
-                $this->setOsType('linux');
-                break;
-            case 'Darwin':
-                $this->setOsType('macos');
-                break;
-            case 'WINNT':
-                $this->setOsType('win');
-                break;
-        }
+        $this->setOsType($this->getRealOsType());
+        $this->extEnabled = require __DIR__ . '/builder/enabled_extensions.php';
     }
 
     public function setLinker(string $ld): static
@@ -159,7 +113,7 @@ class Preprocessor
         return self::$instance;
     }
 
-    protected function setOsType(string $osType)
+    protected function setOsType(string $osType): void
     {
         $this->osType = $osType;
     }
@@ -199,16 +153,6 @@ class Preprocessor
             return 'base';
         } else {
             return 'base' . '-' . $arch;
-        }
-    }
-
-    public function getBaseImageDockerFile(): string
-    {
-        $arch = $this->getSystemArch();
-        if ($arch == 'x64') {
-            return 'Dockerfile';
-        } else {
-            return 'Dockerfile' . '-' . $arch;
         }
     }
 
@@ -278,6 +222,11 @@ class Preprocessor
         return $this->workDir;
     }
 
+    public function getWorkExtDir(): string
+    {
+        return $this->workDir . '/ext/';
+    }
+
     public function setExtraLdflags(string $flags)
     {
         $this->extraLdflags = $flags;
@@ -288,12 +237,12 @@ class Preprocessor
         $this->extraCflags = $flags;
     }
 
-    public function setConfigureVarables(string $varables)
+    public function setConfigureVariables(string $variables): void
     {
-        $this->configureVarables = $varables;
+        $this->configureVariables = $variables;
     }
 
-    public function setExtraOptions(string $options)
+    public function setExtraOptions(string $options): void
     {
         $this->extraOptions = $options;
     }
@@ -319,7 +268,18 @@ class Preprocessor
         return $this;
     }
 
-    public function donotInstallLibrary()
+    public function setBuildType(string $buildType): static
+    {
+        $this->buildType = $buildType;
+        return $this;
+    }
+
+    public function getBuildType(): string
+    {
+        return $this->buildType;
+    }
+
+    public function doNotInstallLibrary(): void
     {
         $this->installLibrary = false;
     }
@@ -327,10 +287,9 @@ class Preprocessor
     /**
      * @param string $url
      * @param string $file
-     * @param string $md5sum
-     * @throws Exception
+     * @param object|null $project [ $lib or $ext ]
      */
-    protected function downloadFile(string $url, string $file, string $md5sum)
+    protected function downloadFile(string $url, string $file, ?object $project = null)
     {
         $retry_number = DOWNLOAD_FILE_RETRY_NUMBE;
         $wait_retry = DOWNLOAD_FILE_WAIT_RETRY;
@@ -339,7 +298,7 @@ class Preprocessor
         if ($this->getInputOption('with-downloader') === 'wget') {
             $cmd = "wget   {$url}  -O {$file}  -t {$retry_number} --wait={$wait_retry} -T {$connect_timeout} ";
         } else {
-            $cmd = "curl  --connect-timeout {$connect_timeout} --retry {$retry_number}  --retry-delay {$wait_retry}  -Lo '{$file}' '{$url}' ";
+            $cmd = "curl  --connect-timeout {$connect_timeout} --retry {$retry_number}  --retry-delay {$wait_retry}  -fSLo '{$file}' '{$url}' ";
         }
         echo $cmd;
         echo PHP_EOL;
@@ -352,25 +311,12 @@ class Preprocessor
         if (!is_file($file) or filesize($file) == 0) {
             throw new Exception("Downloading file[" . basename($file) . "] from url[$url] failed");
         }
-        // 下载文件的 MD5 不一致
-        if (!empty($md5sum) and !$this->checkFileMd5sum($file, $md5sum)) {
-            throw new Exception("The md5 of downloaded file[$file] is inconsistent with the configuration");
+        // 下载文件的 hash 不一致
+        if ($project->enableHashVerify) {
+            if (!$project->hashVerify($file)) {
+                throw new Exception("The {$project->hashAlgo} of downloaded file[$file] is inconsistent with the configuration");
+            }
         }
-    }
-
-    /**
-     * @param string $path
-     * @param string $md5
-     * @return bool
-     */
-    protected function checkFileMd5sum(string $path, string $md5): bool
-    {
-        // md5 不匹配，删除文件
-        if ($md5 != md5_file($path)) {
-            unlink($path);
-            return false;
-        }
-        return true;
     }
 
     /**
@@ -388,18 +334,25 @@ class Preprocessor
         }
 
         $lib->path = $this->libraryDir . '/' . $lib->file;
-        if (!empty($lib->md5sum) and is_file($lib->path)) {
-            // 本地文件被修改，MD5 不一致，删除后重新下载
-            $this->checkFileMd5sum($lib->path, $lib->md5sum);
+        if ($lib->enableHashVerify) {
+            // 本地文件被修改，hash 不一致，删除后重新下载
+            $lib->hashVerify($lib->path);
         }
 
         $skip_download = ($this->getInputOption('skip-download'));
         if (!$skip_download) {
             if (!is_file($lib->path) or filesize($lib->path) === 0) {
                 echo "[Library] {$lib->file} not found, downloading: " . $lib->url . PHP_EOL;
-                $this->downloadFile($lib->url, $lib->path, $lib->md5sum);
+                $this->downloadFile($lib->url, $lib->path, $lib);
             } else {
                 echo "[Library] file cached: " . $lib->file . PHP_EOL;
+            }
+            if ($this->getInputOption('show-tarball-hash')) {
+                echo "[Library] {$lib->name} " . PHP_EOL;
+                echo "md5:    " . hash_file('md5', $lib->path) . PHP_EOL;
+                echo "sha1:   " . hash_file('sha1', $lib->path) . PHP_EOL;
+                echo "sha256: " . hash_file('sha256', $lib->path) . PHP_EOL;
+                echo PHP_EOL;
             }
         }
 
@@ -407,7 +360,11 @@ class Preprocessor
             $this->pkgConfigPaths[] = $lib->pkgConfig;
         }
         if (!empty($lib->binPath)) {
-            $this->binPaths[] = $lib->binPath;
+            if (is_array($lib->binPath)) {
+                $this->binPaths = array_merge($this->binPaths, $lib->binPath);
+            } else {
+                $this->binPaths[] = $lib->binPath;
+            }
         }
         if (empty($lib->license)) {
             throw new Exception("require license");
@@ -428,18 +385,23 @@ class Preprocessor
                 $ext->url = $this->getInputOption('with-download-mirror-url') . '/ext/' . $ext->file;
             }
 
-            // 检查文件的 MD5，若不一致删除后重新下载
-            if (!empty($ext->md5sum) and is_file($ext->path)) {
-                // 本地文件被修改，MD5 不一致，删除后重新下载
-                $this->checkFileMd5sum($ext->path, $ext->md5sum);
+            if ($ext->enableHashVerify) {
+                // 检查文件的 hash，若不一致删除后重新下载
+                $ext->hashVerify($ext->path);
             }
-
             if (!$this->getInputOption('skip-download')) {
                 if (!is_file($ext->path) or filesize($ext->path) === 0) {
                     echo "[Extension] {$ext->file} not found, downloading: " . $ext->url . PHP_EOL;
-                    $this->downloadFile($ext->url, $ext->path, $ext->md5sum);
+                    $this->downloadFile($ext->url, $ext->path, $ext);
                 } else {
                     echo "[Extension] file cached: " . $ext->file . PHP_EOL;
+                }
+                if ($this->getInputOption('show-tarball-hash')) {
+                    echo "[Extension] {$ext->name} " . PHP_EOL;
+                    echo "md5:    " . hash_file('md5', $ext->path) . PHP_EOL;
+                    echo "sha1:   " . hash_file('sha1', $ext->path) . PHP_EOL;
+                    echo "sha256: " . hash_file('sha256', $ext->path) . PHP_EOL;
+                    echo PHP_EOL;
                 }
                 $dst_dir = "{$this->rootDir}/ext/{$ext->name}";
                 $this->mkdirIfNotExists($dst_dir, 0777, true);
@@ -604,6 +566,7 @@ class Preprocessor
                     }
                 }
             } elseif ($op == '@') {
+                $this->inVirtualMachine = $value != $this->getRealOsType();
                 $this->setOsType($value);
             }
         }
@@ -671,7 +634,7 @@ class Preprocessor
     /**
      * Scan and load config files in directory
      */
-    protected function scanConfigFiles(string $dir, array &$extAvailabled)
+    protected function scanConfigFiles(string $dir, array &$extAvailable): void
     {
         $files = scandir($dir);
         foreach ($files as $f) {
@@ -680,14 +643,14 @@ class Preprocessor
             }
             $path = $dir . '/' . $f;
             if (is_dir($path)) {
-                $this->scanConfigFiles($path, $extAvailabled);
+                $this->scanConfigFiles($path, $extAvailable);
             } else {
-                $extAvailabled[basename($f, '.php')] = require $path;
+                $extAvailable[basename($f, '.php')] = require $path;
             }
         }
     }
 
-    public function loadDependentExtension($extension_name)
+    public function loadDependentExtension($extension_name): void
     {
         if (!isset($this->extensionMap[$extension_name])) {
             $file = realpath(__DIR__ . '/builder/extension/' . $extension_name . '.php');
@@ -757,8 +720,8 @@ class Preprocessor
         $this->mkdirIfNotExists($this->extensionDir, 0777, true);
         include __DIR__ . '/constants.php';
 
-        $extAvailabled = [];
-        $this->scanConfigFiles(__DIR__ . '/builder/extension', $extAvailabled);
+        $extAvailable = [];
+        $this->scanConfigFiles(__DIR__ . '/builder/extension', $extAvailable);
 
         $confPath = $this->getInputOption('conf-path');
         if ($confPath) {
@@ -767,27 +730,19 @@ class Preprocessor
                 if (!is_dir($dir)) {
                     continue;
                 }
-                $this->scanConfigFiles($dir, $extAvailabled);
+                $this->scanConfigFiles($dir, $extAvailable);
             }
         }
 
         $this->extEnabled = array_unique($this->extEnabled);
         foreach ($this->extEnabled as $ext) {
-            if (!isset($extAvailabled[$ext])) {
+            if (!isset($extAvailable[$ext])) {
                 echo "unsupported extension[$ext]\n";
                 continue;
             }
-            ($extAvailabled[$ext])($this);
+            ($extAvailable[$ext])($this);
             if (isset($this->extCallbacks[$ext])) {
                 ($this->extCallbacks[$ext])($this);
-            }
-        }
-
-        if ($this->getOsType() == 'macos') {
-            if (is_file('/usr/local/opt/bison/bin/bison')) {
-                $this->withBinPath('/usr/local/opt/bison/bin');
-            } else {
-                $this->loadDependentLibrary("bison");
             }
         }
 
@@ -808,19 +763,13 @@ class Preprocessor
         $this->pkgConfigPaths[] = '$PKG_CONFIG_PATH';
         $this->pkgConfigPaths = array_unique($this->pkgConfigPaths);
 
-        if ($this->getOsType() == 'macos') {
-            $libcpp = '-lc++';
-        } else {
-            $libcpp = '-lstdc++';
-        }
-
         $packagesArr = $this->getLibraryPackages();
         if (!empty($packagesArr)) {
             $packages = implode(' ', $packagesArr);
             $this->withVariable('PACKAGES', $packages);
             $this->withVariable('CPPFLAGS', '$CPPFLAGS $(pkg-config --cflags-only-I --static $PACKAGES ) ');
             $this->withVariable('LDFLAGS', '$LDFLAGS $(pkg-config --libs-only-L --static $PACKAGES ) ');
-            $this->withVariable('LIBS', '$LIBS $(pkg-config --libs-only-l --static $PACKAGES ) ' . $libcpp);
+            $this->withVariable('LIBS', '$LIBS $(pkg-config --libs-only-l --static $PACKAGES ) ');
         }
         if (!empty($this->varables) || !empty($packagesArr)) {
             $this->withExportVariable('CPPFLAGS', '$CPPFLAGS');
@@ -833,10 +782,11 @@ class Preprocessor
         $this->setExtensionDependency();
 
         if ($this->getInputOption('skip-download')) {
-            $this->generateLibraryDownloadLinks();
+            $this->generateDownloadLinks();
         }
 
         $this->generateFile(__DIR__ . '/template/make.php', $this->rootDir . '/make.sh');
+        shell_exec('chmod a+x ' . $this->rootDir . '/make.sh');
         $this->mkdirIfNotExists($this->rootDir . '/bin');
         $this->generateFile(__DIR__ . '/template/license.php', $this->rootDir . '/bin/LICENSE');
         $this->generateFile(__DIR__ . '/template/credits.php', $this->rootDir . '/bin/credits.html');
@@ -845,7 +795,7 @@ class Preprocessor
 
         if ($this->getInputOption('with-dependency-graph')) {
             $this->generateFile(
-                __DIR__ . '/template/extension_ependency_graph.php',
+                __DIR__ . '/template/extension_dependency_graph.php',
                 $this->rootDir . '/bin/ext-dependency-graph.graphviz.dot'
             );
         }
@@ -869,7 +819,7 @@ class Preprocessor
         }
     }
 
-    protected function generateLibraryDownloadLinks(): void
+    protected function generateDownloadLinks(): void
     {
         $this->mkdirIfNotExists($this->getRootDir() . '/var/download-box/', 0755, true);
 
@@ -901,5 +851,38 @@ class Preprocessor
             $this->getRootDir() . '/var/download-box/download_extension_urls.txt',
             implode(PHP_EOL, $download_urls)
         );
+    }
+
+    public function getRealOsType(): string
+    {
+        switch (PHP_OS) {
+            default:
+            case 'Linux':
+                return 'linux';
+            case 'Darwin':
+                return 'macos';
+            case 'WINNT':
+                return 'win';
+        }
+    }
+
+    public function isLinux(): bool
+    {
+        return $this->osType === 'linux';
+    }
+
+    public function isMacos(): bool
+    {
+        return $this->osType === 'macos';
+    }
+
+    public function hasLibrary(string $lib): bool
+    {
+        return isset($this->libraryMap[$lib]);
+    }
+
+    public function hasExtension(string $ext): bool
+    {
+        return isset($this->extensionMap[$ext]);
     }
 }

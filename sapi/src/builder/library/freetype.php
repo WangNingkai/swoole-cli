@@ -14,7 +14,9 @@ return function (Preprocessor $p) {
                 'https://gitlab.freedesktop.org/freetype/freetype/-/blob/master/docs/GPLv2.TXT',
                 Library::LICENSE_GPL
             )
-            ->withUrl('https://sourceforge.net/projects/freetype/files/freetype2/2.10.4/freetype-2.10.4.tar.gz')
+            ->withUrl('https://sourceforge.net/projects/freetype/files/freetype2/2.13.2/freetype-2.13.2.tar.gz')
+            ->withMd5sum('d99447cf00c5f2679918f66f2b5771f6')
+            ->withFileHash('md5', 'd99447cf00c5f2679918f66f2b5771f6')
             ->withPrefix($freetype_prefix)
             ->withConfigure(
                 <<<EOF

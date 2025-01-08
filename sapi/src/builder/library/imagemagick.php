@@ -11,9 +11,9 @@ return function (Preprocessor $p) {
             ->withHomePage('https://imagemagick.org/index.php')
             ->withManual('https://github.com/ImageMagick/ImageMagick.git')
             ->withLicense('https://imagemagick.org/script/license.php', Library::LICENSE_APACHE2)
-            ->withUrl('https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.0-62.tar.gz')
-            ->withFile('ImageMagick-v7.1.0-62.tar.gz')
-            ->withMd5sum('37b896e9eecd379a6cd0d6359b9f525a')
+            ->withUrl('https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.1-20.tar.gz')
+            ->withFile('ImageMagick-v7.1.1-20.tar.gz')
+            ->withFileHash('md5', '90eb1a9263b47b7e844eb817fe08932c')
             ->withPrefix($imagemagick_prefix)
             ->withConfigure(
                 <<<EOF

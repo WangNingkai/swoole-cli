@@ -745,6 +745,7 @@ typedef cli_shell_callbacks_t *(__cdecl *get_cli_shell_callbacks)(void);
 
 #else
 #define GET_SHELL_CB(cb) (cb) = php_cli_get_shell_callbacks()
+  
 #endif
 
 PHP_MINIT_FUNCTION(cli_readline)

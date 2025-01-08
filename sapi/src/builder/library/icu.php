@@ -5,7 +5,7 @@ use SwooleCli\Preprocessor;
 
 return function (Preprocessor $p) {
     $icu_prefix = ICU_PREFIX;
-    $os = $p->getOsType() == 'macos' ? 'MacOSX' : 'Linux';
+    $os = $p->isMacos() ? 'MacOSX' : 'Linux';
     $p->addLibrary(
         (new Library('icu'))
             ->withHomePage('https://icu.unicode.org/')
@@ -13,7 +13,8 @@ return function (Preprocessor $p) {
             ->withManual(
                 'https://unicode-org.github.io/icu/userguide/icu_data/#:~:text=Building%20and%20Linking%20against%20ICU%20data'
             )
-            ->withUrl('https://github.com/unicode-org/icu/releases/download/release-60-3/icu4c-60_3-src.tgz')
+            ->withUrl('https://github.com/unicode-org/icu/releases/download/release-73-2/icu4c-73_2-src.tgz')
+            ->withFileHash('md5', 'b8a4b8cf77f2e2f6e1341eac0aab2fc4')
             ->withManual('https://unicode-org.github.io/icu/userguide/icu_data/#overview')
             ->withPrefix($icu_prefix)
             ->withConfigure(
@@ -35,6 +36,9 @@ EOF
             ->withPkgName('icu-i18n')
             ->withPkgName('icu-io')
             ->withPkgName('icu-uc')
-            ->withBinPath($icu_prefix . '/bin/:' . $icu_prefix . "/sbin")
+            ->withBinPath([$icu_prefix . '/bin', $icu_prefix . '/sbin',])
     );
+
+    $libs = $p->isMacos() ? '-lc++' : ' -lstdc++ ';
+    $p->withVariable('LIBS', '$LIBS ' . $libs);
 };

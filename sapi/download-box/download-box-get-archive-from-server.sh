@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -exu
 __DIR__=$(
@@ -11,20 +11,46 @@ __PROJECT__=$(
 )
 cd ${__PROJECT__}
 
-mkdir -p  pool/lib
-mkdir -p  pool/ext
+mkdir -p pool/lib
+mkdir -p pool/ext
 
 test -d ${__PROJECT__}/var/download-box/ || mkdir -p ${__PROJECT__}/var/download-box/
 
 cd ${__PROJECT__}/var/download-box/
 
+ALL_DEPS_HASH="a55699ecee994032f33266dfa37eabb49f1f6d6b6b65cdcf7b881cac09c63bea"
 
-DOMAIN='https://swoole-cli.jingjingxyk.com/'
-URL="${DOMAIN}/all-archive.zip"
+DOMAIN='https://github.com/swoole/swoole-cli/releases/download/v6.0.0.0/'
 
-test -f  all-archive.zip || wget -O all-archive.zip ${URL}
+while [ $# -gt 0 ]; do
+  case "$1" in
+  --mirror)
+    if [ "$2" = 'china' ]; then
+      DOMAIN='https://swoole-cli.jingjingxyk.com/'
+    fi
+    ;;
+  --*)
+    echo "Illegal option $1"
+    ;;
+  esac
+  shift $(($# > 0 ? 1 : 0))
+done
 
-unzip -n all-archive.zip
+URL="${DOMAIN}/all-deps.zip"
+
+test -f all-deps.zip || curl -fSLo all-deps.zip ${URL}
+
+# hash 签名
+HASH=$(sha256sum all-deps.zip | awk '{print $1}')
+
+# 签名验证失败，删除下载文件
+if [ ${HASH} != ${ALL_DEPS_HASH} ]; then
+  echo 'hash signature is invalid ！'
+  rm -f all-deps.zip
+  exit 0
+fi
+
+unzip -n all-deps.zip
 
 cd ${__PROJECT__}/
 

@@ -48,6 +48,18 @@ const DOWNLOAD_FILE_CONNECTION_TIMEOUT = 15;
 define("NGHTTP3_PREFIX", $p->getGlobalPrefix() . '/nghttp3');
 define("NGTCP2_PREFIX", $p->getGlobalPrefix() . '/ngtcp2');
 define("LIBSSH2_PREFIX", $p->getGlobalPrefix() . '/libssh2');
-define("LIBUNISTRING_PREFIX", $p->getGlobalPrefix() . '/libunistring');
 define("PGSQL_PREFIX", $p->getGlobalPrefix() . '/pgsql');
 define("UNIX_ODBC_PREFIX", $p->getGlobalPrefix() . '/unix_odbc');
+
+define("UTIL_LINUX_PREFIX", $p->getGlobalPrefix() . '/util_linux');
+define("GETTEXT_PREFIX", $p->getGlobalPrefix() . '/gettext');
+define("LIBUNISTRING_PREFIX", $p->getGlobalPrefix() . '/libunistring');
+
+define("LIBURING_PREFIX", $p->getGlobalPrefix() . '/liburing');
+
+define("LIBAVIF_PREFIX", $p->getGlobalPrefix() . '/libavif');
+define("DAV1D_PREFIX", $p->getGlobalPrefix() . '/dav1d');
+define("LIBGAV1_PREFIX", $p->getGlobalPrefix() . '/libgav1');
+define("AOM_PREFIX", $p->getGlobalPrefix() . '/aom');
+define("SVT_AV1_PREFIX", $p->getGlobalPrefix() . '/svt_av1');
+define("LIBYUV_PREFIX", $p->getGlobalPrefix() . '/libyuv');
