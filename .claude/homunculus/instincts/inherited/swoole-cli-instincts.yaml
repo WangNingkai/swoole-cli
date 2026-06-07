@@ -1,0 +1,259 @@
+# Instincts generated from https://github.com/WangNingkai/swoole-cli
+# Generated: 2026-05-14T09:25:52.040Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: swoole-cli-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/WangNingkai/swoole-cli
+---
+
+# Swoole Cli Commit Length
+
+## Action
+
+Keep commit messages concise (~34 characters)
+
+## Evidence
+
+- Average commit message length: 34 chars
+- Based on 2 commits
+
+---
+id: swoole-cli-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/WangNingkai/swoole-cli
+---
+
+# Swoole Cli Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: swoole-cli-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/WangNingkai/swoole-cli
+---
+
+# Swoole Cli Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: swoole-cli-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/WangNingkai/swoole-cli
+---
+
+# Swoole Cli Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: swoole-cli-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/WangNingkai/swoole-cli
+---
+
+# Swoole Cli Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: swoole-cli-instinct-filename-camelcase
+trigger: "When creating or renaming a file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Filename Camelcase
+
+## Action
+
+Use camelCase for file names
+
+## Evidence
+
+- Pattern in namingConventions.files
+
+---
+id: swoole-cli-instinct-function-camelcase
+trigger: "When defining a function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Function Camelcase
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions
+
+---
+id: swoole-cli-instinct-class-pascalcase
+trigger: "When defining a class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Class Pascalcase
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes
+
+---
+id: swoole-cli-instinct-constant-screaming-snake-case
+trigger: "When declaring a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Constant Screaming Snake Case
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants
+
+---
+id: swoole-cli-instinct-import-relative
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Import Relative
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in importStyle
+
+---
+id: swoole-cli-instinct-export-named
+trigger: "When exporting from a module"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Export Named
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle
+
+---
+id: swoole-cli-instinct-commit-freeform
+trigger: "When writing a git commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Commit Freeform
+
+## Action
+
+Use a freeform message, optionally starting with a Chinese or English phrase describing the change, and referencing issue numbers in parentheses
+
+## Evidence
+
+- Seen in commit '解决maocos 环境下 oniguruma 构建错误 (#1081)'
+- Seen in commit 'Upgrade mongodb to v2.3.1 (#1082)'
+
+---
+id: swoole-cli-instinct-test-separate-folder
+trigger: "When adding or organizing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: WangNingkai/swoole-cli
+---
+
+# Swoole Cli Instinct Test Separate Folder
+
+## Action
+
+Place tests in a separate folder from source code
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation
+
